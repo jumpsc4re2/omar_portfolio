@@ -1,0 +1,614 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens. Dark is the default; data-theme="light" on <html> swaps them.
+ * --accent and --canvas for both themes come from siteConfig.theme (src/config/site.ts),
+ * injected by the root layout, so the greens are defined once and shared with the
+ * OG image and favicon.
+ */
+:root {
+  color-scheme: dark;
+  --ink: #f4f4ef;
+  --muted: rgb(244 244 239 / 0.62);
+  --line: rgb(255 255 255 / 0.09);
+  /* Backing for image wells and the portrait. */
+  --surface: #151514;
+  --statement: #f1f1ec;
+  --paper: #f1efe3;
+  --paper-ink: #1a1a17;
+  --tape: rgb(255 255 255 / 0.3);
+  /* Multiplier for drop-shadow opacity; light backgrounds need softer shadows. */
+  --shadow-strength: 1;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #141412;
+  --muted: rgb(20 20 18 / 0.64);
+  --line: rgb(20 20 18 / 0.12);
+  --surface: #e3e3dc;
+  --statement: #1a1a17;
+  /* White paper reads as a note against the off-white wall; the tape darkens to stay visible. */
+  --paper: #ffffff;
+  --paper-ink: #1a1a17;
+  --tape: rgb(20 20 18 / 0.1);
+  --shadow-strength: 0.45;
+}
+
+@theme {
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --color-statement: var(--statement);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-canvas);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    min-height: 100svh;
+    overflow-x: clip;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-canvas);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /* Keep headings clear of the fixed navbar when jumping to a section. */
+  section[id],
+  footer[id] {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+@layer components {
+  /* ── Hero load sequence ─────────────────────────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .intro {
+      animation: intro 900ms var(--ease-premium) both;
+      animation-delay: calc(var(--intro-step, 0) * 80ms);
+    }
+  }
+
+  /* ── Status dot ─────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .pulse-ring {
+      animation: pulse 2.4s var(--ease-premium) infinite;
+    }
+  }
+
+  /* ── Rotating phrase pill ───────────────────────────────────────── */
+  /*
+   * Half the title size, shrunk when needed so the widest phrase (--rotator-max, in em,
+   * measured by RotatingWord) always fits the hero column (the nearest @container).
+   */
+  .rotator {
+    --rotator-max: 8;
+    --rotator-pad-em: 0.45;
+    --rotator-pad: calc(var(--rotator-pad-em) * 1em);
+    --rotator-border: 3px;
+    position: relative;
+    display: inline-flex;
+    max-width: 100%;
+    overflow: hidden;
+    border: var(--rotator-border) solid currentColor;
+    border-radius: 9999px;
+    padding: 0.04em var(--rotator-pad) 0.12em;
+    font-size: min(
+      0.5em,
+      calc((100cqw - 2 * var(--rotator-border) - 4px) / (var(--rotator-max) + 2 * var(--rotator-pad-em)))
+    );
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+  }
+
+  .rotator-item {
+    position: absolute;
+    top: 0.04em;
+    left: var(--rotator-pad);
+    white-space: nowrap;
+  }
+
+  /* The pill's overflow is the mask: phrases slide out of it, so they never need to fade. */
+  .rotator-item[data-state="idle"] {
+    transform: translate3d(0, 120%, 0);
+  }
+
+  .rotator-item[data-state="exit"] {
+    transform: translate3d(0, -120%, 0);
+  }
+
+  @media (min-width: 64rem) {
+    .rotator {
+      --rotator-border: 4px;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rotator {
+      transition: width 700ms var(--ease-premium);
+    }
+
+    .rotator-item {
+      transition: transform 700ms var(--ease-premium);
+    }
+
+    .rotator-item[data-state="idle"] {
+      transition: none;
+    }
+  }
+
+  /* ── Portrait cluster ───────────────────────────────────────────── */
+  .portrait-glow {
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--color-accent) 30%, transparent),
+      color-mix(in oklab, var(--color-accent) 9%, transparent) 55%,
+      transparent
+    );
+    opacity: 0.6;
+    transition: opacity 700ms var(--ease-premium);
+  }
+
+  .portrait-cluster[data-active] .portrait-glow {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .portrait {
+      transition: transform 700ms var(--ease-premium);
+    }
+
+    .portrait-cluster[data-active] .portrait {
+      transform: perspective(900px) rotateX(calc(var(--tilt-y, 0) * -5deg))
+        rotateY(calc(var(--tilt-x, 0) * 5deg)) scale(1.03);
+    }
+  }
+
+  /* ── Paper notes ────────────────────────────────────────────────── */
+  .paper-note {
+    border-radius: 3px;
+    background-color: var(--color-paper);
+    color: var(--color-paper-ink);
+    transform: rotate(var(--note-rotate, 0deg));
+    box-shadow:
+      0 1px 1px rgb(0 0 0 / calc(0.3 * var(--shadow-strength))),
+      0 4px 8px -2px rgb(0 0 0 / calc(0.35 * var(--shadow-strength))),
+      0 18px 36px -14px rgb(0 0 0 / calc(0.6 * var(--shadow-strength)));
+  }
+
+  .paper-note::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 28px 48px -18px rgb(0 0 0 / calc(0.7 * var(--shadow-strength)));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 600ms var(--ease-premium);
+  }
+
+  .paper-note-tape {
+    position: absolute;
+    top: -0.7rem;
+    left: 50%;
+    width: 4.25rem;
+    height: 1.35rem;
+    translate: -50% 0;
+    rotate: -3deg;
+    background-color: var(--tape);
+    box-shadow: 0 1px 2px rgb(0 0 0 / calc(0.18 * var(--shadow-strength)));
+    clip-path: polygon(3% 0, 97% 6%, 100% 100%, 0 94%);
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .paper-note {
+      transition: transform 600ms var(--ease-premium);
+    }
+
+    .paper-note:hover {
+      transform: rotate(calc(var(--note-rotate, 0deg) * 0.35)) translate3d(0, -6px, 0);
+    }
+
+    .paper-note:hover::after {
+      opacity: 1;
+    }
+  }
+
+  /* ── Ticker ─────────────────────────────────────────────────────── */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee-track {
+      animation: marquee var(--marquee-duration, 90s) linear infinite;
+    }
+
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
+  /* ── Scroll reveals (played once by ViewportObserver) ───────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] {
+      transition:
+        opacity 700ms var(--ease-premium),
+        transform 700ms var(--ease-premium);
+      transition-delay: var(--reveal-delay, 0ms);
+    }
+
+    [data-reveal]:not([data-revealed]) {
+      opacity: 0;
+      transform: translate3d(0, 18px, 0);
+    }
+
+    [data-reveal-words] .reveal-word {
+      transition:
+        opacity 600ms var(--ease-premium),
+        transform 600ms var(--ease-premium);
+      transition-delay: calc(var(--i, 0) * 26ms);
+    }
+
+    [data-reveal-words]:not([data-revealed]) .reveal-word {
+      opacity: 0;
+      transform: translate3d(0, 0.32em, 0);
+    }
+  }
+
+  /* ── Experience timeline ────────────────────────────────────────── */
+  .timeline-dot {
+    position: absolute;
+    left: 50%;
+    width: 0.75rem;
+    height: 0.75rem;
+    translate: -50% 0;
+    border-radius: 9999px;
+    background-color: var(--color-canvas);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-ink) 28%, transparent);
+  }
+
+  .timeline-dot::before,
+  .timeline-dot::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+    transition: opacity 600ms var(--ease-premium);
+  }
+
+  .timeline-dot::before {
+    inset: -1.25rem;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--color-accent) 55%, transparent),
+      transparent
+    );
+  }
+
+  .timeline-dot::after {
+    inset: 0;
+    background-color: var(--color-accent);
+  }
+
+  /* Without JS or with reduced motion the line is drawn and every dot is lit. */
+  [data-timeline="animated"] .timeline-dot:not([data-lit])::before,
+  [data-timeline="animated"] .timeline-dot:not([data-lit])::after {
+    opacity: 0;
+  }
+
+  [data-timeline="animated"] .timeline-dot[data-lit]:not([data-current])::before {
+    opacity: 0.3;
+  }
+
+  /* ── Project cards ──────────────────────────────────────────────── */
+  .project-card {
+    --mx: 50%;
+    --my: 50%;
+    --px: 0;
+    --py: 0;
+    --tilt: 3deg;
+  }
+
+  .project-card[data-featured] {
+    --tilt: 1.5deg;
+  }
+
+  .card-spotlight,
+  .card-spotlight-border {
+    position: absolute;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .card-spotlight {
+    inset: 0;
+    background: radial-gradient(
+      36rem circle at var(--mx) var(--my),
+      color-mix(in oklab, var(--color-accent) 8%, transparent),
+      transparent 45%
+    );
+  }
+
+  .card-spotlight-border {
+    inset: -1px;
+    padding: 1px;
+    background: radial-gradient(
+      24rem circle at var(--mx) var(--my),
+      color-mix(in oklab, var(--color-accent) 80%, transparent),
+      transparent 60%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+
+  .card-dim,
+  .card-desat {
+    opacity: 0;
+  }
+
+  .card-dim {
+    background-color: var(--color-canvas);
+  }
+
+  .card-desat {
+    background-color: #808080;
+    mix-blend-mode: saturation;
+  }
+
+  /* Colours live here rather than in utilities so the hover rule below can override them. */
+  .card-arrow {
+    border: 1px solid color-mix(in oklab, var(--color-ink) 20%, transparent);
+    color: var(--color-ink);
+    transition:
+      background-color 500ms var(--ease-premium),
+      color 500ms var(--ease-premium),
+      border-color 500ms var(--ease-premium);
+  }
+
+  .card-arrow svg {
+    transition: transform 600ms var(--ease-premium);
+  }
+
+  [aria-expanded="true"] .card-arrow svg {
+    transform: rotate(180deg);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .project-card:hover .card-arrow {
+      border-color: var(--color-accent);
+      background-color: var(--color-accent);
+      color: var(--color-canvas);
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .project-card {
+      transition: transform 700ms var(--ease-premium);
+    }
+
+    .project-card:hover {
+      transform: perspective(1600px) rotateX(calc(var(--py) * var(--tilt) * -1))
+        rotateY(calc(var(--px) * var(--tilt)));
+    }
+
+    .card-spotlight,
+    .card-spotlight-border,
+    .card-dim,
+    .card-desat {
+      transition: opacity 600ms var(--ease-premium);
+    }
+
+    .card-dim {
+      opacity: 0.22;
+    }
+
+    .card-desat {
+      opacity: 0.55;
+    }
+
+    .project-card:hover .card-spotlight,
+    .project-card:hover .card-spotlight-border {
+      opacity: 1;
+    }
+
+    .project-card:hover .card-dim,
+    .project-card:hover .card-desat {
+      opacity: 0;
+    }
+
+    .card-media-img {
+      transition: transform 900ms var(--ease-premium);
+    }
+
+    .project-card:hover .card-media-img {
+      transform: translate3d(calc(var(--px) * -10px), calc(var(--py) * -10px), 0) scale(1.04);
+    }
+  }
+
+  .project-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+  }
+
+  .project-panel[data-open] {
+    grid-template-rows: 1fr;
+  }
+
+  .project-panel > div {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  .project-panel[data-open] > div {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .project-panel {
+      transition: grid-template-rows 600ms var(--ease-premium);
+    }
+
+    .project-panel > div {
+      transition: opacity 500ms var(--ease-premium);
+    }
+  }
+
+  /* ── Cursor pill (follows the mouse over project images) ───────── */
+  .cursor-pill {
+    opacity: 0;
+    transition: opacity 200ms var(--ease-premium);
+  }
+
+  .cursor-pill[data-visible] {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Grows out of the pointer corner with a slight spring; the trailing motion is in CursorPill. */
+    .cursor-pill {
+      scale: 0.6;
+      transform-origin: 0 0;
+      transition:
+        opacity 200ms var(--ease-premium),
+        scale 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .cursor-pill[data-visible] {
+      scale: 1;
+    }
+  }
+
+  /* ── Back-to-top badge ──────────────────────────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .badge-ring {
+      animation: spin 28s linear infinite;
+    }
+  }
+
+  /* ── Theme toggle: the current theme's icon turns in, the other turns out ── */
+  .theme-icon {
+    grid-area: 1 / 1;
+  }
+
+  .theme-icon-sun {
+    --icon-turn: 90deg;
+  }
+
+  .theme-icon-moon {
+    --icon-turn: -90deg;
+  }
+
+  :root:not([data-theme="light"]) .theme-icon-sun,
+  :root[data-theme="light"] .theme-icon-moon {
+    opacity: 0;
+    transform: rotate(var(--icon-turn)) scale(0.4);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .theme-icon {
+      transition:
+        transform 600ms var(--ease-premium),
+        opacity 400ms var(--ease-premium);
+    }
+  }
+
+  /* Infinite animations stop while their section is off-screen. */
+  [data-paused] .pulse-ring,
+  [data-paused] .marquee-track,
+  [data-paused] .badge-ring {
+    animation-play-state: paused;
+  }
+}
+
+/* Theme switches cross-fade (ThemeToggle uses the View Transitions API where supported). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 450ms;
+    animation-timing-function: var(--ease-premium);
+  }
+}
+
+/* Starts at 0.01 rather than 0 so the hero text still counts as painted for LCP. */
+@keyframes intro {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, 20px, 0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  80%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/*
+ * Instrument Serif only appears below the fold. Until its block nears the viewport
+ * (ViewportObserver sets data-font-ready), text uses next/font's size-matched fallback,
+ * so the serif files stay out of the initial load. Unlayered so it beats .font-serif.
+ */
+[data-defer-font]:not([data-font-ready]) .font-serif {
+  font-family: "Instrument Serif Fallback", ui-serif, Georgia, serif;
+}
